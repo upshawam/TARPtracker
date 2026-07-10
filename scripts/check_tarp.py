@@ -41,6 +41,8 @@ COLUMNS = [
     "Date Caught",
 ]
 
+ANGLER_NAME_KEY = "Angler's Name"
+
 UA = "TARPtracker/1.0 (+https://github.com/)"
 
 
@@ -220,7 +222,7 @@ def diff_rows(
 
 def markdown_row(row: dict[str, str]) -> str:
     return (
-        f"- Name: {row[\"Angler's Name\"]} | Species: {row['Kind of Fish (Species)']} | "
+        f'- Name: {row[ANGLER_NAME_KEY]} | Species: {row["Kind of Fish (Species)"]} | '
         f"Length: {row['Length of fish']} | Water: {row['Body of Water Caught']} | "
         f"County: {row['County']} | Date: {row['Date Caught']}"
     )
@@ -311,7 +313,7 @@ def build_pages_status(meta: dict[str, Any], history: list[dict[str, Any]]) -> N
         adds = item.get("addedRows", [])
         added_preview = "<br>".join(
             html.escape(
-                f"{r.get(\"Angler's Name\", '')} | {r.get('Kind of Fish (Species)', '')} | {r.get('Date Caught', '')}"
+                f'{r.get(ANGLER_NAME_KEY, "")} | {r.get("Kind of Fish (Species)", "")} | {r.get("Date Caught", "")}'
             )
             for r in adds[:8]
         )
