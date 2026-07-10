@@ -9,7 +9,9 @@ import html
 import json
 import os
 import re
+import socket
 import sys
+import time
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -31,6 +33,7 @@ RUN_RESULT = REPORTS_DIR / "run_result.json"
 
 SOURCE_PAGE_URL = "https://www.tn.gov/twra/fishing/tennessee-angler-recognition-program/#summary"
 DEFAULT_AJAX_PATH = "/twra/fishing/tennessee-angler-recognition-program/_jcr_content/contentFullWidth/tn_complex_datatable.exceldriven.json"
+RETRYABLE_HTTP = {408, 425, 429, 500, 502, 503, 504}
 
 COLUMNS = [
     "Angler's Name",
@@ -58,13 +61,38 @@ def iso_z(value: dt.datetime) -> str:
     return value.replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-def fetch_text(url: str, timeout: int = 30) -> str:
-    req = Request(url, headers={"User-Agent": UA})
-    try:
-        with urlopen(req, timeout=timeout) as resp:
-            return resp.read().decode("utf-8", errors="replace")
-    except (HTTPError, URLError) as exc:
-        raise TrackerError(f"Request failed for {url}: {exc}") from exc
+def fetch_text(url: str, timeout: int = 30, attempts: int = 5, base_delay: float = 1.5) -> str:
+    req = Request(
+        url,
+        headers={
+            "User-Agent": UA,
+            "Accept": "text/html,application/json;q=0.9,*/*;q=0.8",
+            "Connection": "close",
+        },
+    )
+
+    last_exc: Exception | None = None
+    for i in range(attempts):
+        try:
+            with urlopen(req, timeout=timeout) as resp:
+                return resp.read().decode("utf-8", errors="replace")
+
+        except HTTPError as exc:
+            last_exc = exc
+            if exc.code not in RETRYABLE_HTTP or i == attempts - 1:
+                raise TrackerError(f"Request failed for {url}: {exc}") from exc
+
+        except URLError as exc:
+            last_exc = exc
+            reason = getattr(exc, "reason", exc)
+            retryable = isinstance(reason, (ConnectionResetError, TimeoutError, socket.timeout, OSError))
+            if not retryable or i == attempts - 1:
+                raise TrackerError(f"Request failed for {url}: {exc}") from exc
+
+        delay = base_delay * (2**i)
+        time.sleep(delay)
+
+    raise TrackerError(f"Request failed for {url}: {last_exc}")
 
 
 def fetch_json(url: str, timeout: int = 30) -> Any:
@@ -352,7 +380,7 @@ def build_pages_status(meta: dict[str, Any], history: list[dict[str, Any]]) -> N
     * {{ box-sizing: border-box; }}
     body {{
       margin: 0;
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      font-family: \"Segoe UI\", Tahoma, Geneva, Verdana, sans-serif;
       color: var(--ink);
       background: radial-gradient(circle at top right, #dff1e5 0%, var(--bg) 55%);
     }}
@@ -424,9 +452,14 @@ def build_pages_status(meta: dict[str, Any], history: list[dict[str, Any]]) -> N
 
 
 def discover_source() -> tuple[str, str, list[dict[str, str]]]:
-    page_html = fetch_text(SOURCE_PAGE_URL)
-    ajax_path = extract_ajax_path(page_html) or DEFAULT_AJAX_PATH
-    ajax_url = urljoin("https://www.tn.gov", ajax_path)
+    ajax_url = urljoin("https://www.tn.gov", DEFAULT_AJAX_PATH)
+
+    try:
+        page_html = fetch_text(SOURCE_PAGE_URL)
+        ajax_path = extract_ajax_path(page_html) or DEFAULT_AJAX_PATH
+        ajax_url = urljoin("https://www.tn.gov", ajax_path)
+    except TrackerError:
+        pass
 
     payload = fetch_json(ajax_url)
     rows_raw = extract_rows(payload)
