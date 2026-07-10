@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TARP Tracker Status</title>
+  <style>
+    :root {
+      --bg: #f2f7f3;
+      --card: #ffffff;
+      --ink: #1f2a25;
+      --muted: #4f6a5c;
+      --accent: #1f7a55;
+      --line: #d7e4db;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--ink);
+      background: radial-gradient(circle at top right, #dff1e5 0%, var(--bg) 55%);
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 24px; }
+    .hero {
+      background: linear-gradient(120deg, #1f7a55, #2a9d63);
+      color: #fff;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 12px 30px rgba(31, 122, 85, 0.2);
+    }
+    .card {
+      margin-top: 16px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1>Tennessee TARP Tracker</h1>
+      <p>Status page is waiting for the first scheduled run.</p>
+    </section>
+
+    <section class="card">
+      <p>After the first run, this page will show:</p>
+      <ul>
+        <li>Latest participant count</li>
+        <li>Last checked timestamp</li>
+        <li>Dates of detected changes</li>
+        <li>What rows were added on each update</li>
+      </ul>
+      <p>Data source: <a href="https://www.tn.gov/twra/fishing/tennessee-angler-recognition-program/#summary">TWRA TARP summary page</a></p>
+    </section>
+  </div>
+</body>
+</html>

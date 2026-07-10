@@ -1,0 +1,165 @@
+name: TARP Daily Check
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 11:15 UTC is overnight for US Central and lands in morning notifications.
+    - cron: "15 11 * * *"
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run TARP check
+        id: check
+        continue-on-error: true
+        run: |
+          python scripts/check_tarp.py
+
+      - name: Read run result
+        id: result
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path("reports/run_result.json")
+          output_path = os.environ["GITHUB_OUTPUT"]
+          if not path.exists():
+              with open(output_path, "a", encoding="utf-8") as out:
+                  out.write("status=failure\n")
+                  out.write("changed=false\n")
+                  out.write("error=Missing reports/run_result.json\n")
+              raise SystemExit(0)
+
+          payload = json.loads(path.read_text(encoding="utf-8"))
+          status = str(payload.get("status", "failure"))
+          changed = str(bool(payload.get("changed", False))).lower()
+          error = str(payload.get("error", ""))
+
+          with open(output_path, "a", encoding="utf-8") as out:
+              out.write(f"status={status}\n")
+              out.write(f"changed={changed}\n")
+              out.write(f"error={error}\n")
+          PY
+
+      - name: Commit changed artifacts
+        if: steps.result.outputs.status == 'success' && steps.result.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/current.csv data/current_meta.json data/change_history.json data/history docs/index.html reports/latest_diff.md reports/run_result.json
+          if git diff --cached --quiet; then
+            echo "No commit needed"
+            exit 0
+          fi
+          git commit -m "chore: update TARP snapshot and diff report"
+          git push
+
+      - name: Comment on rolling change issue
+        if: steps.result.outputs.status == 'success' && steps.result.outputs.changed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const title = 'TARP Tracker: Rolling Change Log';
+            const labels = ['tarp-tracker'];
+
+            const diffBody = fs.readFileSync('reports/latest_diff.md', 'utf8');
+            const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`;
+            const commentBody = `${diffBody}\n\nWorkflow run: ${runUrl}`;
+
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: 'open',
+              per_page: 100
+            });
+
+            let issue = issues.find(i => i.title === title);
+            if (!issue) {
+              const created = await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body: 'Rolling issue for TARP data changes. Subscribe to this issue for email alerts.',
+                labels
+              });
+              issue = created.data;
+            }
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: issue.number,
+              body: commentBody
+            });
+
+      - name: Create or update failure issue
+        if: steps.result.outputs.status == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const title = 'TARP Tracker: Failure Alert';
+            const labels = ['tarp-tracker', 'failure'];
+            const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`;
+            const err = `${{ toJSON(steps.result.outputs.error) }}`.replace(/^"|"$/g, '');
+            const body = [
+              `TARP check failed.`,
+              ``,
+              `Error: ${err || 'Unknown error'}`,
+              `Workflow run: ${runUrl}`
+            ].join('\n');
+
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: 'open',
+              per_page: 100
+            });
+
+            let issue = issues.find(i => i.title === title);
+            if (!issue) {
+              const created = await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body,
+                labels
+              });
+              issue = created.data;
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issue.number,
+                body
+              });
+            }
+
+      - name: Fail workflow on checker failure
+        if: steps.result.outputs.status == 'failure'
+        run: |
+          echo "TARP checker failed"
+          exit 1
