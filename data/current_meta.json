@@ -1,7 +1,10 @@
 {
   "baselineSeededFrom": "Tennessee Angler Recognition Program (TARP).csv",
   "baselineRecordCount": 9826,
-  "lastCheckedAt": null,
+  "lastCheckedAt": "2026-07-10T20:36:09Z",
   "lastChangedAt": null,
-  "source": "seeded-local-csv"
+  "source": "seeded-local-csv",
+  "latestRecordCount": 9826,
+  "sourceUrl": "https://www.tn.gov/twra/fishing/tennessee-angler-recognition-program/#summary",
+  "dataUrl": "https://www.tn.gov/twra/fishing/tennessee-angler-recognition-program/_jcr_content/contentFullWidth/tn_complex_datatable.exceldriven.json"
 }

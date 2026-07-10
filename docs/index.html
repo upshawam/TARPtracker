@@ -28,13 +28,23 @@
       padding: 24px;
       box-shadow: 0 12px 30px rgba(31, 122, 85, 0.2);
     }
-    .card {
+    .grid {
       margin-top: 16px;
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+    .card {
       background: var(--card);
       border: 1px solid var(--line);
       border-radius: 12px;
       padding: 14px;
     }
+    .label { color: var(--muted); font-size: 13px; margin-bottom: 6px; }
+    .value { font-size: 20px; font-weight: 700; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid var(--line); padding: 10px; text-align: left; vertical-align: top; }
+    th { background: #f7fcf8; }
     a { color: var(--accent); }
   </style>
 </head>
@@ -42,18 +52,31 @@
   <div class="wrap">
     <section class="hero">
       <h1>Tennessee TARP Tracker</h1>
-      <p>Status page is waiting for the first scheduled run.</p>
+      <p>Automated monitor for TWRA participant data changes.</p>
     </section>
 
-    <section class="card">
-      <p>After the first run, this page will show:</p>
-      <ul>
-        <li>Latest participant count</li>
-        <li>Last checked timestamp</li>
-        <li>Dates of detected changes</li>
-        <li>What rows were added on each update</li>
-      </ul>
-      <p>Data source: <a href="https://www.tn.gov/twra/fishing/tennessee-angler-recognition-program/#summary">TWRA TARP summary page</a></p>
+    <section class="grid">
+      <div class="card"><div class="label">Latest Record Count</div><div class="value">9826</div></div>
+      <div class="card"><div class="label">Last Checked (UTC)</div><div class="value" style="font-size:16px">2026-07-10T20:36:09Z</div></div>
+      <div class="card"><div class="label">Last Change (UTC)</div><div class="value" style="font-size:16px">No detected changes yet</div></div>
+      <div class="card"><div class="label">Source</div><div class="value" style="font-size:16px"><a href="https://www.tn.gov/twra/fishing/tennessee-angler-recognition-program/#summary">TWRA TARP Page</a></div></div>
+    </section>
+
+    <section class="card" style="margin-top: 16px;">
+      <h2>Change History</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Changed At (UTC)</th>
+            <th>Count</th>
+            <th>Delta</th>
+            <th>Added Rows</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="4">No changes recorded yet.</td></tr>
+        </tbody>
+      </table>
     </section>
   </div>
 </body>
