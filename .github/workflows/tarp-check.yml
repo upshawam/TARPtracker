@@ -3,8 +3,8 @@ name: TARP Daily Check
 on:
   workflow_dispatch:
   schedule:
-    # 11:15 UTC is overnight for US Central and lands in morning notifications.
-    - cron: "15 11 * * *"
+    # 08:15 UTC runs a few hours earlier for US Central.
+    - cron: "15 8 * * *"
 
 permissions:
   contents: write
