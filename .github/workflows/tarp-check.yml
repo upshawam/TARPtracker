@@ -76,8 +76,8 @@ jobs:
               out.write(f"error={error}\n")
           PY
 
-      - name: Commit changed artifacts
-        if: steps.result.outputs.status == 'success' && steps.result.outputs.changed == 'true'
+      - name: Commit status artifacts
+        if: steps.result.outputs.status == 'success'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -86,7 +86,11 @@ jobs:
             echo "No commit needed"
             exit 0
           fi
-          git commit -m "chore: update TARP snapshot and diff report"
+          if [ "${{ steps.result.outputs.changed }}" = "true" ]; then
+            git commit -m "chore: update TARP snapshot and diff report"
+          else
+            git commit -m "chore: update TARP status heartbeat"
+          fi
           git push
 
       - name: Comment on rolling change issue
